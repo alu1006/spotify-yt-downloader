@@ -83,6 +83,69 @@ def scrape_playlist():
     return jsonify({'status': 'started'})
 
 
+@app.route('/api/download-youtube', methods=['POST'])
+def download_youtube():
+    """Download from YouTube URL (single video or playlist)"""
+    if status['downloading']:
+        return jsonify({'error': '正在下載中，請稍候'}), 400
+    
+    data = request.get_json()
+    url = data.get('url', '')
+    
+    if not url or ('youtube.com' not in url and 'youtu.be' not in url):
+        return jsonify({'error': '請輸入有效的 YouTube 網址'}), 400
+    
+    def run_yt_download():
+        status['downloading'] = True
+        status['message'] = '正在下載 YouTube...'
+        status['progress'] = 0
+        
+        try:
+            download_dir = Path('downloads')
+            download_dir.mkdir(exist_ok=True)
+            
+            # Check if it's a playlist
+            is_playlist = 'list=' in url
+            
+            if is_playlist:
+                status['message'] = '正在下載 YouTube 播放清單...'
+                cmd = [
+                    'yt-dlp', '-x', '--audio-format', 'mp3',
+                    '--audio-quality', '0',
+                    '-o', str(download_dir / '%(title)s.%(ext)s'),
+                    '--yes-playlist',
+                    url
+                ]
+            else:
+                status['message'] = '正在下載 YouTube 影片...'
+                cmd = [
+                    'yt-dlp', '-x', '--audio-format', 'mp3',
+                    '--audio-quality', '0',
+                    '-o', str(download_dir / '%(title)s.%(ext)s'),
+                    '--no-playlist',
+                    url
+                ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            
+            if result.returncode == 0:
+                status['message'] = '下載完成！'
+            else:
+                status['message'] = f'下載失敗: {result.stderr[:200]}'
+            
+            status['progress'] = 100
+            
+        except subprocess.TimeoutExpired:
+            status['message'] = '下載逾時'
+        except Exception as e:
+            status['message'] = f'錯誤: {e}'
+        finally:
+            status['downloading'] = False
+    
+    threading.Thread(target=run_yt_download, daemon=True).start()
+    return jsonify({'status': 'started'})
+
+
 @app.route('/api/download', methods=['POST'])
 def download_songs():
     """Start downloading all songs"""

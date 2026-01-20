@@ -272,6 +272,17 @@
             </div>
         </div>
 
+        <!-- YouTube Direct Download -->
+        <div class="card">
+            <h2 class="card-title">🎬 YouTube 直接下載</h2>
+            <p style="color: #888; margin-bottom: 12px; font-size: 0.9rem;">支援單一影片或播放清單連結</p>
+            <div class="input-group">
+                <input type="text" id="youtubeUrl"
+                    placeholder="https://www.youtube.com/watch?v=... 或 playlist?list=...">
+                <button class="btn btn-primary" onclick="downloadYouTube()">📥 下載 MP3</button>
+            </div>
+        </div>
+
         <!-- Status -->
         <div class="status-bar">
             <div id="statusText">就緒</div>
@@ -395,6 +406,32 @@
                 }
             } catch (e) {
                 alert('開啟失敗: ' + e.message);
+            }
+        }
+
+        async function downloadYouTube() {
+            const url = document.getElementById('youtubeUrl').value.trim();
+            if (!url) {
+                alert('請輸入 YouTube 網址');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/download-youtube', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                startStatusPolling();
+            } catch (e) {
+                setStatus('錯誤: ' + e.message);
             }
         }
 
