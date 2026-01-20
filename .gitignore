@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+downloads/
+*.mp3
+*.mp4
+token.pickle
+client_secret.json
+spotify_tracks.json
+spotify_tracks.db
+youtube_results.json
+debug_screenshot.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

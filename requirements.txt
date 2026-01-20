@@ -1,0 +1,9 @@
+# Spotify playlist scraping
+playwright>=1.40.0
+
+# YouTube API
+google-auth-oauthlib>=1.2.0
+google-api-python-client>=2.100.0
+
+# Utilities
+python-dotenv>=1.0.0

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify to YouTube 歌單轉換器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #1DB954, #1ed760);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #b3b3b3;
+            font-size: 1rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #1DB954;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        input[type="text"]::placeholder {
+            color: #888;
+        }
+
+        input[type="text"]:focus {
+            outline: 2px solid #1DB954;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #1DB954, #1ed760);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(29, 185, 84, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .track-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .track-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .track-index {
+            width: 40px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .track-info {
+            flex: 1;
+        }
+
+        .track-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .track-artist {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-bar {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1DB954, #1ed760);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .stat {
+            background: rgba(29, 185, 84, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Spotify to YouTube</h1>
+            <p class="subtitle">轉換 Spotify 歌單到 YouTube 並下載 MP3</p>
+        </header>
+
+        <!-- Step 1: Input URL -->
+        <div class="card">
+            <h2 class="card-title">📋 步驟 1：輸入 Spotify 歌單網址</h2>
+            <div class="input-group">
+                <input type="text" id="spotifyUrl" placeholder="https://open.spotify.com/playlist/...">
+                <button class="btn btn-primary" onclick="scrapePlaylist()">抓取歌單</button>
+                <button class="btn btn-secondary" onclick="loadExisting()">載入現有資料</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Track List -->
+        <div class="card">
+            <h2 class="card-title">🎶 步驟 2：歌曲清單</h2>
+            <div class="stats">
+                <span class="stat" id="trackCount">歌曲: 0 首</span>
+                <span class="stat" id="playlistName">歌單: --</span>
+            </div>
+            <div class="track-list" id="trackList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>尚未載入任何歌曲</p>
+                    <p>請輸入 Spotify 歌單網址並點擊「抓取歌單」</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Actions -->
+        <div class="card">
+            <h2 class="card-title">🚀 步驟 3：執行操作</h2>
+            <div class="input-group" style="margin-bottom: 16px;">
+                <input type="text" id="ytPlaylistName" placeholder="YouTube 歌單名稱">
+                <button class="btn btn-primary" onclick="createYouTubePlaylist()">📺 建立 YouTube 歌單</button>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="downloadAll()">📥 下載全部 MP3</button>
+                <button class="btn btn-secondary" onclick="openDownloads()">📁 開啟下載資料夾</button>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status-bar">
+            <div id="statusText">就緒</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusInterval = null;
+
+        async function loadExisting() {
+            try {
+                const response = await fetch('/api/tracks');
+                const data = await response.json();
+                displayTracks(data);
+                document.getElementById('ytPlaylistName').value = data.playlist_name || '';
+            } catch (e) {
+                setStatus('載入失敗: ' + e.message);
+            }
+        }
+
+        function displayTracks(data) {
+            const trackList = document.getElementById('trackList');
+            const tracks = data.tracks || [];
+
+            document.getElementById('trackCount').textContent = `歌曲: ${tracks.length} 首`;
+            document.getElementById('playlistName').textContent = `歌單: ${data.playlist_name || '--'}`;
+
+            if (tracks.length === 0) {
+                trackList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>尚未載入任何歌曲</p>
+                    </div>`;
+                return;
+            }
+
+            trackList.innerHTML = tracks.map((track, i) => `
+                <div class="track-item">
+                    <span class="track-index">${i + 1}</span>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artists.join(', ')}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function scrapePlaylist() {
+            const url = document.getElementById('spotifyUrl').value.trim();
+            if (!url) {
+                alert('請輸入 Spotify 歌單網址');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                startStatusPolling();
+            } catch (e) {
+                setStatus('錯誤: ' + e.message);
+            }
+        }
+
+        async function downloadAll() {
+            try {
+                const response = await fetch('/api/download', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                startStatusPolling();
+            } catch (e) {
+                setStatus('錯誤: ' + e.message);
+            }
+        }
+
+        async function createYouTubePlaylist() {
+            const name = document.getElementById('ytPlaylistName').value.trim() || 'My Playlist';
+
+            try {
+                const response = await fetch('/api/youtube/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                startStatusPolling();
+            } catch (e) {
+                setStatus('錯誤: ' + e.message);
+            }
+        }
+
+        async function openDownloads() {
+            try {
+                const response = await fetch('/api/open-folder', { method: 'POST' });
+                const data = await response.json();
+                if (data.error) {
+                    alert('開啟失敗: ' + data.error);
+                }
+            } catch (e) {
+                alert('開啟失敗: ' + e.message);
+            }
+        }
+
+        function setStatus(text) {
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function setProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        let lastScraping = false;
+
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+
+            statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+
+                    setStatus(data.message || '就緒');
+                    setProgress(data.progress || 0);
+
+                    // Check if scraping just finished
+                    if (lastScraping && !data.scraping) {
+                        // Scraping finished, reload tracks
+                        setTimeout(() => loadExisting(), 500);
+                    }
+                    lastScraping = data.scraping;
+
+                    // If no operation is running, stop polling
+                    if (!data.scraping && !data.downloading && !data.creating_playlist) {
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                } catch (e) {
+                    console.error('Status poll error:', e);
+                }
+            }, 1000);
+        }
+
+        // Load existing data on page load
+        window.onload = loadExisting;
+    </script>
+</body>
+
+</html>
