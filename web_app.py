@@ -269,7 +269,146 @@ def open_download_folder():
         return jsonify({'error': str(e)}), 500
 
 
+# ============ MP3 Editor APIs ============
+
+@app.route('/editor')
+def editor():
+    """MP3 Editor page"""
+    return render_template('editor.html')
+
+
+@app.route('/api/files')
+def list_files():
+    """List all MP3 files in downloads folder"""
+    download_dir = Path('downloads')
+    download_dir.mkdir(exist_ok=True)
+    
+    files = []
+    for f in download_dir.glob('*.mp3'):
+        stat = f.stat()
+        files.append({
+            'name': f.name,
+            'size': stat.st_size,
+            'modified': stat.st_mtime
+        })
+    
+    # Sort by modification time (newest first)
+    files.sort(key=lambda x: x['modified'], reverse=True)
+    return jsonify({'files': files})
+
+
+@app.route('/api/audio/<filename>')
+def serve_audio(filename):
+    """Serve audio file for playback"""
+    from flask import send_from_directory
+    download_dir = Path('downloads').absolute()
+    return send_from_directory(download_dir, filename)
+
+
+@app.route('/api/audio-info/<filename>')
+def get_audio_info(filename):
+    """Get audio duration using ffprobe"""
+    filepath = Path('downloads') / filename
+    
+    if not filepath.exists():
+        return jsonify({'error': '檔案不存在'}), 404
+    
+    try:
+        cmd = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json',
+            '-show_format', str(filepath)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            import json
+            info = json.loads(result.stdout)
+            duration = float(info.get('format', {}).get('duration', 0))
+            return jsonify({
+                'duration': duration,
+                'filename': filename
+            })
+        else:
+            return jsonify({'error': 'ffprobe failed'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/trim', methods=['POST'])
+def trim_audio():
+    """Trim audio file"""
+    data = request.get_json()
+    filename = data.get('filename', '')
+    start = data.get('start', 0)
+    end = data.get('end', 0)
+    
+    if not filename:
+        return jsonify({'error': '請選擇檔案'}), 400
+    
+    filepath = Path('downloads') / filename
+    if not filepath.exists():
+        return jsonify({'error': '檔案不存在'}), 404
+    
+    # Generate output filename
+    stem = filepath.stem
+    output_name = f"{stem}_trimmed.mp3"
+    output_path = Path('downloads') / output_name
+    
+    # If already exists, add number
+    counter = 1
+    while output_path.exists():
+        output_name = f"{stem}_trimmed_{counter}.mp3"
+        output_path = Path('downloads') / output_name
+        counter += 1
+    
+    try:
+        duration = end - start
+        cmd = [
+            'ffmpeg', '-y', '-i', str(filepath),
+            '-ss', str(start), '-t', str(duration),
+            '-acodec', 'libmp3lame', '-q:a', '2',
+            str(output_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            return jsonify({
+                'status': 'success',
+                'output': output_name,
+                'message': f'剪輯完成！儲存為 {output_name}'
+            })
+        else:
+            return jsonify({'error': f'ffmpeg error: {result.stderr[:200]}'}), 500
+            
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': '剪輯逾時'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/delete', methods=['POST'])
+def delete_file():
+    """Delete a file"""
+    data = request.get_json()
+    filename = data.get('filename', '')
+    
+    if not filename:
+        return jsonify({'error': '請選擇檔案'}), 400
+    
+    filepath = Path('downloads') / filename
+    if not filepath.exists():
+        return jsonify({'error': '檔案不存在'}), 404
+    
+    try:
+        filepath.unlink()
+        return jsonify({'status': 'deleted', 'message': f'已刪除 {filename}'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
     app.run(debug=True, port=5000)
+
 

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP3 剪輯工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #e74c3c, #f39c12);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #f39c12;
+        }
+
+        .file-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-item.selected {
+            background: rgba(243, 156, 18, 0.2);
+            border: 1px solid rgba(243, 156, 18, 0.5);
+        }
+
+        .file-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #e74c3c, #f39c12);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(243, 156, 18, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .player-section {
+            text-align: center;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .time-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .time-input label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .time-input input {
+            width: 100px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .time-display {
+            font-size: 1.5rem;
+            font-family: monospace;
+            color: #f39c12;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .waveform-container {
+            position: relative;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(243, 156, 18, 0.3);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .trim-region {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: rgba(46, 204, 113, 0.3);
+            border-left: 2px solid #2ecc71;
+            border-right: 2px solid #2ecc71;
+        }
+
+        .current-time {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #fff;
+        }
+
+        .status-bar {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .time-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>✂️ MP3 剪輯工具</h1>
+            <div class="nav">
+                <a href="/">🎵 下載器</a>
+                <a href="/editor" class="active">✂️ 剪輯工具</a>
+            </div>
+        </header>
+
+        <!-- File List -->
+        <div class="card">
+            <h2 class="card-title">📁 選擇檔案</h2>
+            <div class="file-list" id="fileList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>載入中...</p>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 12px;">
+                <button class="btn btn-secondary" onclick="loadFiles()">🔄 重新整理</button>
+                <button class="btn btn-secondary" onclick="openFolder()">📁 開啟資料夾</button>
+            </div>
+        </div>
+
+        <!-- Audio Player & Editor -->
+        <div class="card" id="editorCard" style="display: none;">
+            <h2 class="card-title">🎧 編輯: <span id="currentFileName">--</span></h2>
+
+            <div class="player-section">
+                <audio id="audioPlayer" class="audio-player" controls></audio>
+
+                <div class="waveform-container" id="waveformContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                    <div class="trim-region" id="trimRegion"></div>
+                    <div class="current-time" id="currentTimeLine"></div>
+                </div>
+
+                <div class="time-controls">
+                    <div class="time-input">
+                        <label>開始時間</label>
+                        <input type="text" id="startTime" value="0:00" placeholder="0:00">
+                    </div>
+                    <div class="time-display" id="durationDisplay">0:00 / 0:00</div>
+                    <div class="time-input">
+                        <label>結束時間</label>
+                        <input type="text" id="endTime" value="0:00" placeholder="0:00">
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="setStartTime()">⬅️ 設為開始</button>
+                    <button class="btn btn-secondary" onclick="setEndTime()">➡️ 設為結束</button>
+                    <button class="btn btn-primary" onclick="trimAudio()">✂️ 剪輯並儲存</button>
+                    <button class="btn btn-danger" onclick="deleteFile()">🗑️ 刪除檔案</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar" id="statusBar">選擇一個檔案開始編輯</div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let audioDuration = 0;
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        // Load file list on page load
+        window.onload = loadFiles;
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const data = await response.json();
+                displayFiles(data.files || []);
+            } catch (e) {
+                setStatus('載入失敗: ' + e.message);
+            }
+        }
+
+        function displayFiles(files) {
+            const fileList = document.getElementById('fileList');
+
+            if (files.length === 0) {
+                fileList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>尚無 MP3 檔案</p>
+                        <p>請先下載一些歌曲</p>
+                    </div>`;
+                return;
+            }
+
+            fileList.innerHTML = files.map(file => `
+                <div class="file-item" onclick="selectFile('${file.name}')" data-filename="${file.name}">
+                    <span class="file-icon">🎵</span>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatSize(file.size)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function selectFile(filename) {
+            currentFile = filename;
+
+            // Update UI
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.dataset.filename === filename) {
+                    item.classList.add('selected');
+                }
+            });
+
+            document.getElementById('currentFileName').textContent = filename;
+            document.getElementById('editorCard').style.display = 'block';
+
+            // Load audio
+            audioPlayer.src = '/api/audio/' + encodeURIComponent(filename);
+            audioPlayer.load();
+
+            // Get duration
+            try {
+                const response = await fetch('/api/audio-info/' + encodeURIComponent(filename));
+                const data = await response.json();
+                if (data.duration) {
+                    audioDuration = data.duration;
+                    document.getElementById('endTime').value = formatTime(audioDuration);
+                    document.getElementById('startTime').value = '0:00';
+                    updateTrimRegion();
+                }
+            } catch (e) {
+                console.error('Get audio info failed:', e);
+            }
+
+            setStatus('已載入: ' + filename);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function parseTime(timeStr) {
+            const parts = timeStr.split(':');
+            if (parts.length === 2) {
+                return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+            }
+            return parseFloat(timeStr) || 0;
+        }
+
+        function setStartTime() {
+            const currentTime = audioPlayer.currentTime;
+            document.getElementById('startTime').value = formatTime(currentTime);
+            updateTrimRegion();
+        }
+
+        function setEndTime() {
+            const currentTime = audioPlayer.currentTime;
+            document.getElementById('endTime').value = formatTime(currentTime);
+            updateTrimRegion();
+        }
+
+        function updateTrimRegion() {
+            const start = parseTime(document.getElementById('startTime').value);
+            const end = parseTime(document.getElementById('endTime').value);
+
+            if (audioDuration > 0) {
+                const startPercent = (start / audioDuration) * 100;
+                const endPercent = (end / audioDuration) * 100;
+
+                const trimRegion = document.getElementById('trimRegion');
+                trimRegion.style.left = startPercent + '%';
+                trimRegion.style.width = (endPercent - startPercent) + '%';
+            }
+        }
+
+        // Update progress bar and current time line
+        audioPlayer.addEventListener('timeupdate', () => {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('currentTimeLine').style.left = progress + '%';
+            document.getElementById('durationDisplay').textContent =
+                formatTime(audioPlayer.currentTime) + ' / ' + formatTime(audioDuration);
+        });
+
+        // Click on waveform to seek
+        document.getElementById('waveformContainer').addEventListener('click', (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percent = clickX / rect.width;
+            audioPlayer.currentTime = percent * audioPlayer.duration;
+        });
+
+        async function trimAudio() {
+            if (!currentFile) {
+                alert('請先選擇檔案');
+                return;
+            }
+
+            const start = parseTime(document.getElementById('startTime').value);
+            const end = parseTime(document.getElementById('endTime').value);
+
+            if (start >= end) {
+                alert('開始時間必須小於結束時間');
+                return;
+            }
+
+            setStatus('正在剪輯...');
+
+            try {
+                const response = await fetch('/api/trim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFile, start, end })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    setStatus('錯誤: ' + data.error);
+                } else {
+                    setStatus(data.message);
+                    loadFiles();
+                }
+            } catch (e) {
+                setStatus('剪輯失敗: ' + e.message);
+            }
+        }
+
+        async function deleteFile() {
+            if (!currentFile) return;
+
+            if (!confirm(`確定要刪除 "${currentFile}" 嗎？`)) return;
+
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFile })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    setStatus('錯誤: ' + data.error);
+                } else {
+                    setStatus(data.message);
+                    currentFile = null;
+                    document.getElementById('editorCard').style.display = 'none';
+                    loadFiles();
+                }
+            } catch (e) {
+                setStatus('刪除失敗: ' + e.message);
+            }
+        }
+
+        async function openFolder() {
+            try {
+                await fetch('/api/open-folder', { method: 'POST' });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function setStatus(text) {
+            document.getElementById('statusBar').textContent = text;
+        }
+
+        // Update trim region when inputs change
+        document.getElementById('startTime').addEventListener('input', updateTrimRegion);
+        document.getElementById('endTime').addEventListener('input', updateTrimRegion);
+    </script>
+</body>
+
+</html>
